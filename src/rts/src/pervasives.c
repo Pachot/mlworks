@@ -1,30 +1,6 @@
 /*  ==== C-IMPLEMENTED PERVASIVES ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1991 Harlequin Ltd.
  *
  *  Implementation
  *  --------------
@@ -40,14 +16,10 @@
  *  Revision Log
  *  ------------
  *  Revision log: $Log: pervasives.c,v $
- *  Revision log: Revision 1.18  1999/03/09 14:56:39  johnh
- *  Revision log: [Bug #190506]
- *  Revision log: Remove old FI - references to foreign_loader.
+ *  Revision log: Revision 1.17  1998/04/27 15:37:48  jkbrook
+ *  Revision log: [Bug #30354]
+ *  Revision log: Temporarily restore old FI to distribution
  *  Revision log:
- * Revision 1.17  1998/04/27  15:37:48  jkbrook
- * [Bug #30354]
- * Temporarily restore old FI to distribution
- *
  * Revision 1.16  1997/05/22  14:34:52  stephenb
  * [Bug #30121]
  * Move to new FI: remove the reference to foreign_loader.h
@@ -423,8 +395,10 @@
 #include "vector.h"
 #include "stacks.h"
 #include "trace.h"
+#include "foreign_loader.h"
 #include "words.h"
 #include "pack_words.h"
+#include "libml.h"
 
 /*  The message level is initialised to a ref cell containing an integer,
  *  and is used by the garbage collector to determine whether to print
@@ -506,6 +480,8 @@ void pervasives_init(void)
   vector_init();
   stacks_init();
   trace_init();
+  foreign_init();
   words_init();
   pack_words_init();
+  libml_init();
 }

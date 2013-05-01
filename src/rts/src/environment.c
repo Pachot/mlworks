@@ -1,30 +1,6 @@
 /*  ==== RUNTIME ENVIRONMENT MANAGEMENT ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harleqiun Ltd
  *
  *  Implementation
  *  --------------
@@ -44,14 +20,10 @@
  *  Revision Log
  *  ------------
  *  $Log: environment.c,v $
- *  Revision 1.12  1998/10/05 11:50:43  jont
- *  [Bug #70185]
- *  Avoid calling weak_add on loader_code if loader_code is DEAD
- *
- * Revision 1.11  1998/03/19  11:49:02  jont
- * [Bug #70026]
- * Allow profiling of stub_c functions, recording the time according
- * to the name of the runtime system functions
+ *  Revision 1.11  1998/03/19 11:49:02  jont
+ *  [Bug #70026]
+ *  Allow profiling of stub_c functions, recording the time according
+ *  to the name of the runtime system functions
  *
  * Revision 1.10  1998/02/23  17:59:57  jont
  * [Bug #70018]
@@ -275,11 +247,11 @@ static mlval new_stub
   declare_root(&name, 0);
   dummy_code = make_dummy_code(name);
   declare_root(&dummy_code, 0);
-  if (loader_code && loader_code != DEAD) {
+  if (loader_code) {
     loader_code = weak_add(loader_code, dummy_code); /* This may call gc, hence declare */
   } else {
     /*
-     * loader_code can be DEAD during global root fixup in image load
+    printf("Not adding extra code for '%s'\n", string);
     */
   } /* Don't worry about stuff done so early */
   closure = allocate_record(5);

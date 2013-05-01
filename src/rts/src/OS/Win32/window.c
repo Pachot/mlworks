@@ -1,23 +1,7 @@
 /* INTERFACE to NT, plus startup code
  *
  * $Log: window.c,v $
- * Revision 1.82  1999/03/23 14:53:27  johnh
- * [Bug #190536]
- * Pick up different about box depending on type of edition.
- *
- * Revision 1.81  1999/03/15  22:37:31  mitchell
- * [Bug #190512]
- * Don't print version and countdown when displaying advert splash screen
- *
- * Revision 1.80  1999/03/09  15:57:11  mitchell
- * [Bug #190509]
- * Update version strings to 2.1
- *
- * Revision 1.79  1999/03/09  10:39:07  mitchell
- * [Bug #190512]
- * Add advert splash screen
- *
- * Revision 1.78  1998/08/14  10:51:58  mitchell
+ * Revision 1.78  1998/08/14 10:51:58  mitchell
  * [Bug #30473]
  * Fix & simplify get_multi_strings function
  *
@@ -396,31 +380,7 @@
  * No reason given
  *
  *
- * Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (C) 1995,1997 The Harlequin Group Limited.  All rights reserved.
  *
  */
 
@@ -520,7 +480,7 @@ char szTitle[]   = "MLWorks"; /* The title bar text */
 char szToplevel[] = "Toplevel";
 char szFrame[] = "Frame";
 
-char szVersion[] = "Version 2.1";
+char szVersion[] = "Version 2.0";
 
 static mlval perv_exn_ref_win;
 static mlval windows_exns_initialised;
@@ -812,10 +772,9 @@ static BOOL do_help (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       lpProcAbout = MakeProcInstance((FARPROC)About, hInst);
 
       DialogBox(hInst,                 /* current instance */
-                "ABOUTPROFESSIONAL",   /* dlg resource to use */
-                hWnd,                  /* parent handle */
-                (DLGPROC)lpProcAbout);  /* About() instance address */
-
+		"AboutBox",            /* dlg resource to use */
+		hWnd,                  /* parent handle */
+		(DLGPROC)lpProcAbout); /* About() instance address */
       FreeProcInstance(lpProcAbout);
       return (TRUE);
 
@@ -1124,7 +1083,7 @@ LRESULT CALLBACK About(
                                 VARIABLE_PITCH | FF_SWISS, "");
 
                         /* Center the dialog over the application window */
-                        CenterWindow (hDlg, GetDesktopWindow ());
+                        CenterWindow (hDlg, GetWindow (hDlg, GW_OWNER));
 
                         /* Get version information from the application */
                         GetModuleFileName (hInst, szFullPath, sizeof(szFullPath));
@@ -1404,11 +1363,9 @@ static mlval do_input (mlval unit)
 }
 
 
-static int current_splash_kind;
-
 static mlval get_splash_bitmap(mlval arg){
   HWND hwindow = CHWND(FIELD(arg, 0));
-  int kind = CINT(FIELD(arg, 1));
+  BOOL isFree = CBOOL(FIELD(arg, 1));
   HANDLE hfbm;
   BITMAPFILEHEADER bmfh;
   BITMAPINFOHEADER bmih;
@@ -1433,14 +1390,10 @@ static mlval get_splash_bitmap(mlval arg){
       not_found = 0;
     }
 
-  current_splash_kind = kind;
-
-  switch (kind) {
-  case 0 : sprintf(filename, "%s\\splash.bmp", filename); break;
-  case 1 : sprintf(filename, "%s\\splash_free.bmp", filename); break;
-  case 2 : sprintf(filename, "%s\\splash_advert.bmp", filename); break;
-  default: sprintf(filename, "%s\\splash_free.bmp", filename); break;
-  }
+  if (isFree)
+    sprintf(filename, "%s\\splash_free.bmp", filename);
+  else
+    sprintf(filename, "%s\\splash.bmp", filename);
 
   hfbm = CreateFile(filename, GENERIC_READ, 
 		    FILE_SHARE_READ, (LPSECURITY_ATTRIBUTES) NULL, 
@@ -1588,13 +1541,11 @@ static mlval get_splash_bitmap(mlval arg){
 			   ANSI_CHARSET, OUT_DEFAULT_PRECIS,
 			   CLIP_DEFAULT_PRECIS, PROOF_QUALITY,
 			   VARIABLE_PITCH | FF_SWISS, "Arial");
-  
-  if (kind != 2) {
-    SelectObject(hdc, version_font);
-    SetBkMode(hdc, TRANSPARENT);
-    TextOut(hdc, 352, 18, szVersion, strlen(szVersion));
-    SelectObject(hdc, oldFont);
-  }
+  SelectObject(hdc, version_font);
+  SetBkMode(hdc, TRANSPARENT);
+  TextOut(hdc, 352, 18, szVersion, strlen(szVersion));
+
+  SelectObject(hdc, oldFont);
 
   /* Not much that we can do if TextOut or the last call to SelectObject
    * fail.
@@ -1650,12 +1601,11 @@ static mlval paint_splash_bitmap(mlval arg)
 	 hdcMem, 0, 0, SRCCOPY); 
   DeleteDC(hdcMem); 
 
-  if (current_splash_kind != 2) {
-    SelectObject(hdc, version_font);
-    SetBkMode(hdc, TRANSPARENT);
-    TextOut(hdc, 352, 18, szVersion, strlen(szVersion));
-    SelectObject(hdc, oldFont); 
-  }
+  SelectObject(hdc, version_font);
+  SetBkMode(hdc, TRANSPARENT);
+  TextOut(hdc, 352, 18, szVersion, strlen(szVersion));
+
+  SelectObject(hdc, oldFont);
   return MLUNIT;
 }
 

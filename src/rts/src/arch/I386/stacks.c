@@ -1,30 +1,6 @@
 /*  === INTEL x86 STACK ROUTINES ===
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1994 Harlequin Ltd
  *
  *  Description
  *  -----------
@@ -33,13 +9,9 @@
  *  Revision Log
  *  ------------
  *  $Log: stacks.c,v $
- *  Revision 1.33  1998/09/17 15:22:35  jont
+ *  Revision 1.32  1998/07/15 15:20:26  jont
  *  [Bug #20124]
- *  Remove compiler warning and improve backtrace and is_ml_frame
- *
- * Revision 1.32  1998/07/15  15:20:26  jont
- * [Bug #20124]
- * Stop assuming all code and closures must be on ml heap
+ *  Stop assuming all code and closures must be on ml heap
  *
  * Revision 1.31  1998/03/19  11:54:25  jont
  * [Bug #70026]
@@ -390,27 +362,6 @@ extern void explore_stacks(void)
 
 /* Stack backtrace */
 
-static const char *code_vector_name(word closure)
-{
-  if (validate_ml_address(&(FIELD(closure, 0)))) {
-    word code = FIELD(closure, 0);
-    if (validate_ml_address((void *)code) && validate_ml_address((void *)(OBJECT(code)))) {
-      if (validate_ml_address(&(CCODEANCILLARY(code))) &&
-	  validate_ml_address(&(CCODEANCRECORD(code, NAMES))) &&
-	  validate_ml_address(&(CCODEANCVALUE(code, NAMES))) &&
-	  validate_ml_address(CSTRING(CCODENAME(code)))) {
-	return CSTRING(CCODENAME(code));
-      } else {	
-	return "invalid code ancillary";
-      }
-    } else {
-      return "invalid code pointer";
-    }
-  } else {
-    return "invalid closure";
-  }
-}
-
 int max_backtrace_depth = 25;
 
 void backtrace(struct stack_frame *sp, struct thread_state *thread,
@@ -424,9 +375,8 @@ void backtrace(struct stack_frame *sp, struct thread_state *thread,
   else {
     while(depth_max-- && sp &&
 	  (word)sp != thread->ml_state.stack_top) {
-      if (validate_address(&sp->closure)) {
-	const char *name =
-	  MLVALISPTR(sp->closure) ? code_vector_name(sp->closure) :
+      const char *name =
+	MLVALISPTR(sp->closure) ? CSTRING(CCODENAME(FIELD(sp->closure, 0))) :
 	  sp->closure == STACK_START ? "stack start" :
 	  sp->closure == STACK_DISTURB_EVENT ? "disturb event" :
 	  sp->closure == STACK_EXTENSION ? "stack extension" :
@@ -437,26 +387,13 @@ void backtrace(struct stack_frame *sp, struct thread_state *thread,
 	  sp->closure == STACK_INTERCEPT ? "intercept" :
 	  sp->closure == STACK_SPACE_PROFILE ? "space profile" : "special";
 
-	message_content("  %p closure 0x%08X: ", sp, sp->closure);
-	message_string(name);
-	message_string("\n");
-      } else {
-	message_content("  %p cannot read closure address %p\n",
-			sp, &sp->closure);
-	break;
-      }
-      if (validate_address(&sp->fp)) {
-	sp = sp->fp;
-      } else {
-	break;
-      }
+      message_content("  %p closure 0x%08X: ", sp, sp->closure);
+      message_string(name);
+      message_string("\n");
+      sp = sp->fp;
     }
     if (sp == NULL || (word)sp == thread->ml_state.stack_top)
       message_content("--- base of stack --- \n");
-    else if (depth_max > 0 && !validate_address(&sp->fp)) {
-      /* Not at top of stack, but address invalid */
-      message_content("  %p cannot read frame address %p\n", sp, &sp->fp);
-    }
   }
 }
 
@@ -464,11 +401,12 @@ mlval is_ml_frame(struct stack_frame *sp)
 {
   mlval closure = sp->closure;
 
-  if(ISORDPTR(closure) && validate_ml_address((void *)closure)) {
+  if(ISORDPTR(closure) && validate_address((void *)closure)) {
     mlval secondary = SECONDARY(GETHEADER(closure));
     if(secondary == RECORD || secondary == 0) {
+      mlval *object = OBJECT(closure);
       mlval code = FIELD(closure, 0);
-      if(validate_ml_address((void *)code) && PRIMARY(code) == POINTER &&
+      if(validate_address((void *)code) && PRIMARY(code) == POINTER &&
 	 SECONDARY(GETHEADER(code)) == BACKPTR)
 	return(code);
     }

@@ -1,30 +1,6 @@
 /*  ==== IMAGE SAVE, LOAD, AND DELIVERY ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harlequin Ltd.
  *
  *  Implementation
  *  --------------
@@ -37,13 +13,9 @@
  *  Revision Log
  *  ------------
  *  $Log: image.c,v $
- *  Revision 1.23  1998/08/21 16:33:35  jont
- *  [Bug #20133]
- *  Modify to use GC_HEAP_REAL_LIMIT
- *
- * Revision 1.22  1998/04/24  10:30:15  jont
- * [Bug #70032]
- * gen->values now measured in bytes
+ *  Revision 1.22  1998/04/24 10:30:15  jont
+ *  [Bug #70032]
+ *  gen->values now measured in bytes
  *
  * Revision 1.21  1998/04/23  13:51:56  jont
  * [Bug #70034]
@@ -1045,7 +1017,6 @@ static mlval image_load_common (struct stream *image)
   /* Copy the creation space pointers to the ML registers so that ML can use */
   /* them. */
   GC_HEAP_LIMIT = creation->end;
-  GC_HEAP_REAL_LIMIT = creation->end;
   GC_HEAP_START = creation->top;
   GC_MODIFIED_LIST = NULL;
 
@@ -1236,7 +1207,7 @@ mlval image_table(mlval argument)
   declare_root(&result, 0);
   for(scan=strtok(table, " "); scan!=NULL; scan=strtok(NULL, " ")) {
     mlval s = ml_string(scan);
-    result = mlw_cons(s, result);
+    result = cons(s, result);
   }
   retract_root(&result);
   free(table);

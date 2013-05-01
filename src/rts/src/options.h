@@ -1,30 +1,6 @@
 /*  ==== COMMAND LINE OPTIONS PARSER ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harlequin Ltd.
  *
  *  Description
  *  -----------
@@ -76,15 +52,11 @@
 #define OPTION_CHAR	'-'
 
 
-/*  == Option descriptor ==
+/*  == Option desciptor ==
  *
  *  An option descriptor specifies the keyword for an option and the number
- *  of arguments it requires.  An array of these descriptors is passed to
+ *  of arguments it requires.  An array of these desciptors is passed to
  *  option_parse() below and updated to contains the parameters.
- *
- *  If nr_arguments is -1, the option takes a variable number of
- *  arguments, delimited by the next parameter.
- *  (for example, "-foo xxx 1 2 3 wibble z xxx -bar").
  */
 
 struct option
@@ -104,9 +76,9 @@ struct option
  *  argv+1.) It also takes an array of option descriptors (see
  *  above) terminated with a descriptor whose `name' field is NULL.  The
  *  parameters in the argv array are matched against the option names and
- *  the option descriptors are updated to indicate that they were specified.
+ *  the option desciptors are updated to inidicate that they were specified.
  *
- *  For example, if OPTION_CHAR is '-' and the descriptor array is
+ *  For example, if OPTION_CHAR is '-' and the desciptor array is
  *  initialised to
  *   {{"x", 0, 0, NULL}, {"y", 2, 0, NULL}, {"z", 1, 0, NULL},
  *    {NULL, 0, 0, NULL}}
@@ -114,7 +86,7 @@ struct option
  *   foo -y A B -x -- -z loofah
  *  i.e. it is the array
  *   {"foo", "-y", "A", "B", "-x", "--", "-z", "loofah"}
- *  the descriptors will be updated to
+ *  the desciptors will be updated to
  *   {{"x", 0, 1, ?}, {"y", 2, 1, {"A", "B"}}, {"z", 1, 0, NULL},
  *    {NULL, 0, 0, NULL}}
  *  and the command array will be
@@ -130,7 +102,7 @@ struct option
 
 enum
 {
-  EOPTIONUNKNOWN=1,	/* An option not in the descriptors was specified. */
+  EOPTIONUNKNOWN=1,	/* An option not in the desciptors was specified. */
   EOPTIONARGS,		/* The wrong number of arguments were specified. */
   EOPTIONDELIM		/* Missing delimiter from delimited option. */
 };

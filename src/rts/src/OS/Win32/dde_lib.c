@@ -1,30 +1,6 @@
 /*  ==== DYNAMIC DATA EXCHANGE for Win32 ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1996 Harlequin Ltd
  *
  *  Description
  *  -----------
@@ -34,13 +10,9 @@
  *  Revision Log
  *  ------------
  *  $Log: dde_lib.c,v $
- *  Revision 1.7  1999/03/11 16:36:13  daveb
- *  [Bug #190523]
- *  Removed dde_send_request_string.
- *
- * Revision 1.6  1998/03/30  15:13:55  jont
- * [Bug #70086]
- * Add a request function for use by the Windows structure
+ *  Revision 1.6  1998/03/30 15:13:55  jont
+ *  [Bug #70086]
+ *  Add a request function for use by the Windows structure
  *
  * Revision 1.5  1998/03/27  18:57:24  jont
  * [Bug #30090]
@@ -243,7 +215,7 @@ static mlval start_dde_dialog (mlval arg)
 }
 
 
-static mlval send_dde_execute_string (mlval arg)
+static mlval send_dde_command (mlval arg, DWORD type)
 {
    dde_info *info;
    char *cmd;
@@ -277,7 +249,7 @@ static mlval send_dde_execute_string (mlval arg)
 		   hConv,        /* Conversation being used             */
 		   0L,           /* handle to item name - not needed    */
 		   0,            /* clipboard data format - not needed  */
-		   XTYP_EXECUTE, /* Type of transaction */
+		   type,         /* Type of transaction */
 		   TIMEOUT_SYNC, /* timeout                             */
 		   NULL);        /* transaction result pointer - unused */
 
@@ -297,6 +269,16 @@ static mlval send_dde_execute_string (mlval arg)
    };
 
    return MLUNIT;
+}
+
+static mlval send_dde_execute_string (mlval arg)
+{
+  return send_dde_command(arg, XTYP_EXECUTE);
+}
+
+static mlval send_dde_request_string (mlval arg)
+{
+  return send_dde_command(arg, XTYP_REQUEST);
 }
 
 static mlval stop_dde_dialog (mlval arg)
@@ -669,6 +651,7 @@ extern void dde_init(void)
 {
   env_function("dde start dialog",         start_dde_dialog);
   env_function("dde send execute string",  send_dde_execute_string);
+  env_function("dde send request string",  send_dde_request_string);
   env_function("dde stop dialog",          stop_dde_dialog);
   env_function("win32 open web location",  open_web_location);
 }

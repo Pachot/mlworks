@@ -1,28 +1,4 @@
-/* Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/* Copyright (C) 1997 The Harlequin Group Limited.  All rights reserved.
  *
  * This is the OS dependent part of the C<->ML interface.
  * Implements dynamic loading of shared objects via dlopen(3).
@@ -30,17 +6,7 @@
  * Revision Log
  * ------------
  * $Log: mlw_ci_os.c,v $
- * Revision 1.6  1998/10/05 11:49:39  jont
- * [Bug #70183]
- * Retry on dlopen failure for relative pathnames, prepending ./
- *
- * Revision 1.5  1998/10/05  10:05:03  jont
- * [Bug #70182]
- * Modify mlw_ci_load_files to call error on failures
- * as exceptions can't be raised at this point (global root restore
- * during image load).
- *
- * Revision 1.4  1998/02/23  19:03:53  jont
+ * Revision 1.4  1998/02/23 19:03:53  jont
  * [Bug #70018]
  * Modify declare_root to accept a second parameter
  * indicating whether the root is live for image save
@@ -61,7 +27,6 @@
  */
 
 #include <dlfcn.h>		/* dlopen */
-#include <string.h>		/* strcat */
 #include "exceptions.h"		/* exn_raise_syserr */
 #include "gc.h"			/* declare_root, retract_root */
 #include "global.h"		/* declare_global, GLOBAL_DEFAULT */
@@ -71,8 +36,7 @@
 #include "mlw_ci_globals.h"	/* mlw_c_init_globals */
 #include "mlw_ci_os_init.h"	/* mlw_c_os_init */
 #include "mlw_syserr.h"		/* mlw_c_raise_syserr */
-#include "utils.h"		/* error */
-#include "diagnostic.h"		/* DIAGNOSTIC */
+
 
 mlw_ci_export mlw_val mlw_ci_raise_syserr(int i)
 {
@@ -195,22 +159,13 @@ static void mlw_ci_load_files(mlw_val files)
     void * file_handle= dlopen(file_name, 1);
 
     if (file_handle == (void *)0) {
-      char *foo = malloc(strlen(file_name) + 3);
-      strcpy(foo, "./");
-      strcat(foo, file_name);
-      DIAGNOSTIC(5, "dlopen of %s failed, retrying with %s", file_name, foo);
-      fflush(stdout);
-      file_handle = dlopen(foo, 1);
-      free(foo);
-    }
-    if (file_handle == (void *)0) {
       retract_root(&fs);
-      error("%s", dlerror());
+      exn_raise_syserr(ml_string(dlerror()), 0);
     } else {
       void (*init_function)()= dlsym(file_handle, init_name);
       if (init_function == NULL) {
 	retract_root(&fs);
-	error("%s", dlerror());
+	exn_raise_syserr(ml_string(dlerror()), 0);
       } else {
 	init_function();
       }

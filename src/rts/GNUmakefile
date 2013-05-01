@@ -1,23 +1,7 @@
 # ==== MLWORKS RUNTIME SYSTEM (GNU) MAKEFILE ====
 #
 # $Log: GNUmakefile,v $
-# Revision 1.116  1999/03/12 15:11:16  mitchell
-# [Bug #190526]
-# Move splash advert to distribution
-#
-# Revision 1.115  1999/03/09  15:06:42  johnh
-# [Bug #190506]
-# Remove old FI.
-#
-# Revision 1.114  1998/11/10  15:57:08  mitchell
-# [Bug #70242]
-# Link in sockets code
-#
-# Revision 1.113  1998/10/16  13:55:06  jont
-# [Bug #70207]
-# Add extra source file for start_mlworks to avoid code replication
-#
-# Revision 1.112  1998/08/18  10:46:10  jont
+# Revision 1.112  1998/08/18 10:46:10  jont
 # [Bug #70154]
 # Delete libmlw.dll and libmlw-g.dll during make clean
 #
@@ -263,14 +247,14 @@
 # and do "gnumake"
 
 CMODULES = alloc allocator arena bytearrays cache diagnostic endian \
-          environment event exceptions fixup \
+          environment event exceptions fi_call_stub fixup foreign_loader \
           gc global image implicit initialise integers intercept \
-          license lists loader marshal mem modules \
+          libml license lists loader marshal mem modules \
           options pack_words pervasives print profiler reals dtoa stacks state \
           streams strings system time trace utils value values vector words \
-          os signals stubs threads sockets mach_state arch_code exec_delivery explore \
-          export time_date os_io_poll os_errors mlw_timer mlw_ci_os \
-	  mlw_ci mlw_ci_io localreals ml_utilities mlw_start
+          os signals stubs threads mach_state arch_code exec_delivery explore \
+          export time_date os_io_poll os_errors mlw_timer sha mlw_ci_os \
+	  mlw_ci mlw_ci_io localreals ml_utilities
 
 MODULES	= $(CMODULES) main interface
 DLLMODULES= $(CMODULES) mlw_dll interface 
@@ -316,14 +300,19 @@ GENFILES = objectfile.sml __objectfile.sml \
 	   __control_names.sml \
            $(ARCH)/$(OS)/offsets.h \
            $(ARCH)/$(OS)/asm_offsets.h \
+           fi_call_stub.c fi_call_stub.h \
            $(ARCH)/$(OS)/os_errors.c
 
-INCLUDEDIRS    = gen/$(ARCH)/$(OS) src/OS/$(OS)/arch/$(ARCH) \
+INCLUDEDIRS    = gen/$(ARCH)/$(OS) gen src/OS/$(OS)/arch/$(ARCH) \
                  src/OS/$(OS) src/OS/$(OS_TYPE) src/OS/$(OS_TYPE)/arch/$(ARCH) \
-		 src/arch/$(ARCH) src
+		 src/arch/$(ARCH) src \
+		 license/liclient/export sha
 
-DEFINES      =
+DEFINES      = LICENSE
 DEFINESDEBUG = DEBUG DIAGNOSTICS COLLECT_STATS EXPLORER
+
+FI_CALL_SIZE    = 32
+# Maximum number of arguments to foreign foreign calls
 
 ifeq "$(NTTYPE)" "TRUE"
 OBJ		= obj
@@ -361,6 +350,13 @@ endif
 chmod_exec=chmod 775
 chmod_read_only=chmod 444
 
+# Some stuff to deal with building the license server interface
+
+ifeq "$(NTTYPE)" "TRUE"
+else
+BUILD_MACH := $(shell /usr/local/bin/class)
+endif
+
 # now include the target-specific makefiles, which can redefine any of
 # the above macros as it likes. Typically will add to MODULES,
 # DEFINES, INCLUDES, LIBRARIES, and may tinker with CCOPTS.
@@ -382,12 +378,16 @@ RTSOBJECTSDEBUG = $(RTSMODULES:%=$(OBJECTDIR)/%-g.o)
 OBJECTSSBR	= $(CMODULES:%=%.sbr)
 DLLOBJECTSSBR	= $(CMODULES:%=%.sbr) mlw_dll.sbr
 OBJECTSSTATIC   = $(MODULESSTATIC:%=$(OBJECTDIR)/%.o)
+ifeq "$(NTTYPE)" "TRUE"
+else
+ARCHIVES	= license/liclient/$(BUILD_MACH)/liclient.a license/licshar/$(BUILD_MACH)/licshar.a
+endif
 TARGETS 	= $(TARGETFILES:%=$(TARGETDIR)/%)
 DISTRIB		= $(DISTFILES:%=$(TARGETDIR)/%)
 ifeq "$(NTTYPE)" "TRUE"
-DISTRIBUTED	= $(DISTRIB) runtime.ico splash.bmp splash_free.bmp splash_advert.bmp
+DISTRIBUTED	= $(DISTRIB) runtime.ico splash.bmp splash_free.bmp $(TARGETDIR)/validate_license.dll
 else
-DISTRIBUTED	= $(DISTRIB) splash.xpm splash_free.xpm splash_advert.xpm
+DISTRIBUTED	= $(DISTRIB) splash.xpm splash_free.xpm mlworks_license
 endif
 
 TESTFIXOBJECTS	= $(subst main,test_fixup,$(OBJECTSDEBUG))
@@ -405,6 +405,34 @@ generated: $(GENERATED)
 objects: $(OBJECTS)
 objectsdebug: $(OBJECTSDEBUG)
 
+REGMODULES	= sha mlw_mklic
+SHAREGOBJECTS   = $(REGMODULES:%=sha/%.o)
+MLWREGOBJECTS	= $(REGMODULES:%=$(OBJECTDIR)/%.o)
+
+ifeq "$(NTTYPE)" "TRUE"
+MLWLICMODULES	= mlworks_license sha license_offset
+MLWLICOBJECTS	= $(MLWLICMODULES:%=$(OBJECTDIR)/%.o) 
+MLWLICDEPENDS	= $(MLWLICOBJECTS) $(TARGETDIR)/validate_license.dll
+else
+MLWLICMODULES	= mlworks_license validate_license sha license_offset
+MLWLICOBJECTS	= $(MLWLICMODULES:%=$(OBJECTDIR)/%.o)
+MLWLICOBJECTSDEBUG	= $(MLWLICMODULES:%=$(OBJECTDIR)/%-g.o)
+MLWLICDEPENDS	= $(MLWLICOBJECTS) 
+endif
+
+# the new license generator is made recursively
+
+$(TARGETDIR)/mlw_mklic: $(MLWREGOBJECTS)
+	@cd sha && $(MAKE) -f Makefile OS=$(OS) mlw_mklic
+	@mv $(SHAREGOBJECTS) $(OBJECTDIR)
+ifeq  "$(NTTYPE)" "TRUE"
+	@mv sha/mlw_mklic.exe $(TARGETDIR)
+else
+	@mv sha/mlw_mklic $(TARGETDIR)
+	@$(STRIP) $@
+endif
+
+
 # === MAKE DIRECTIVES ===
 
 # Disable traditional suffix searches.
@@ -417,6 +445,15 @@ $(DEPENDDIR)/%.d: %.c
 	@echo 'MAKE: $< -> $@'
 	@$(MKDIR) $(DEPENDDIR) $(MKDIREND)
 	@$(DEPENDGEN) $(DEPENDGENFLAGS) $< | sed $(QUOTE)/:/s!$*.o!$(OBJECTDIR)/$*.o $(OBJECTDIR)/$*-g.o $@!$(QUOTE) > $@
+
+# bit of a bizarre rule here; when making the dependency files, gnumake
+# needs the directory of the source file to exist in order to make it.
+# In the case of the fi_call_stub.d dependency, this is gen/
+
+$(DEPENDDIR)/%.d: misc/%_c_gen.c
+	@echo 'MAKE: $< -> $@'
+	@$(MKDIR) gen $(MKDIREND)
+
 
 
 # gen/$(ARCH)/$(OS)/os_errors.c is automatically generated (see 
@@ -508,6 +545,34 @@ else
 	@$(LINK) $(LINKFLAGS)$@ $< $(LINKENDFLAGS)
 endif
 
+$(TARGETDIR)/fi_call_stub_h_gen: $(OBJECTDIR)/fi_call_stub_h_gen.o
+	@echo 'MAKE: $< -> $@'
+	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
+ifeq "$(NTTYPE)" "TRUE"
+	@$(LINK) $(LINKFLAGS)$@.exe $< $(LINKENDFLAGS) -subsystem:console
+else
+	@$(LINK) $(LINKFLAGS)$@ $< $(LINKENDFLAGS)
+endif
+
+gen/fi_call_stub.h: $(TARGETDIR)/fi_call_stub_h_gen
+	@echo 'MAKE: $< -> $@'
+	@$(MKDIR) gen $(MKDIREND)
+	@$< $(FI_CALL_SIZE) > $@
+
+$(TARGETDIR)/fi_call_stub_c_gen: $(OBJECTDIR)/fi_call_stub_c_gen.o
+	@echo 'MAKE: $< -> $@'
+	$(MKDIR) $(TARGETDIR) $(MKDIREND)
+ifeq "$(NTTYPE)" "TRUE"
+	@$(LINK) $(LINKFLAGS)$@.exe $< $(LINKENDFLAGS) -subsystem:console 
+else
+	@$(LINK) $(LINKFLAGS)$@ $< $(LINKENDFLAGS)
+endif
+
+gen/fi_call_stub.c: $(TARGETDIR)/fi_call_stub_c_gen
+	@echo 'MAKE: $< -> $@'
+	$(MKDIR) gen $(MKDIREND)
+	$< $(FI_CALL_SIZE) > $@
+
 # Have to put explicit dependencies on the offsets files here, because
 # Make isn't smart enough to figure them all out (in fact, because gcc
 # -MM insists on finding all the depended-upon files, rather than
@@ -517,6 +582,10 @@ $(OBJECTDIR)/interface.o: gen/$(ARCH)/$(OS)/offsets.h gen/$(ARCH)/$(OS)/asm_offs
 $(OBJECTDIR)/interface-g.o: gen/$(ARCH)/$(OS)/offsets.h gen/$(ARCH)/$(OS)/asm_offsets.h
 $(OBJECTDIR)/poly_equal.o: gen/$(ARCH)/$(OS)/offsets.h
 $(OBJECTDIR)/poly_equal-g.o: gen/$(ARCH)/$(OS)/offsets.h
+$(OBJECTDIR)/foreign_loader-g.o: gen/fi_call_stub.h
+$(OBJECTDIR)/foreign_loader.o: gen/fi_call_stub.h
+$(OBJECTDIR)/fi_call_stub.o: gen/fi_call_stub.h gen/fi_call_stub.c
+$(OBJECTDIR)/fi_call_stub-g.o: gen/fi_call_stub.h gen/fi_call_stub.c
 
 
 # == Search paths ==
@@ -534,6 +603,8 @@ vpath %.c \
   src/arch/$(ARCH) \
   src \
   gen/$(ARCH)/$(OS) \
+  gen \
+  sha \
   misc
 
 # C headers may be generated.
@@ -573,7 +644,35 @@ include $(DEPENDDIR)/test_fixup.d
 
 # === TARGETS ===
 
+# Want to do this explicitly to get correct enddianness
+
+$(OBJDIR)/sha.o:	sha.c
+	@cd sha && $(MAKE) -f Makefile OS=$(OS) sha.o
+	@mv sha.o $(OBJECTDIR)
+
+$(TARGETDIR)/mlworks_license:	$(MLWLICDEPENDS) 
+ifeq "$(NTTYPE)" "TRUE"
+	@$(LINK) $(LINKFLAGS) -o $@.exe $(MLWLICOBJECTS) $(TARGETDIR)/validate_license.lib $(LINKENDFLAGS) -subsystem:console
+else
+	@$(LINK) $(LINKFLAGS) $@ $(MLWLICOBJECTS) $(LIBRARIES)
+	@$(STRIP) $@
+endif
+
+mlworks_license:	force $(TARGETDIR)/mlworks_license
+ifeq "$(NTTYPE)" "TRUE"
+	@rm -f $@.exe
+	cp $(TARGETDIR)/mlworks_license.exe $@.exe
+	cp $(TARGETDIR)/validate_license.dll validate_license.dll
+else
+	@$(RM) $@
+	$(LN) -s $(TARGETDIR)/mlworks_license $@
+endif
+
+ifeq "$(NTTYPE)" "TRUE"
 $(TARGETDIR)/libmlw: $(DLLOBJECTS)
+else
+$(TARGETDIR)/libmlw: $(DLLOBJECTS) $(ARCHIVES)
+endif
 	@echo 'MAKE: $@'
 	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
 ifeq "$(NTTYPE)" "TRUE"
@@ -583,13 +682,17 @@ else
 # 	"libmlw.so" rather than "bin/MIPS/Irix/libmlw.so", otherwise at
 # 	run time the system will start looking for a shared object called
 #	"bin/MIPS..."
-	@$(LINK) $(DLLFLAGS) $(LINKFLAGS) libmlw.so $(DLLOBJECTS) $(LIBRARIES) $(DLLLIBRARIES) $(LINKENDFLAGS)
+	@$(LINK) $(DLLFLAGS) $(LINKFLAGS) libmlw.so $(DLLOBJECTS) $(ARCHIVES) $(LIBRARIES) $(DLLLIBRARIES) $(LINKENDFLAGS)
 	@mv libmlw.so $(TARGETDIR)
 endif
 
 
 
+ifeq "$(NTTYPE)" "TRUE"
 $(TARGETDIR)/libmlw-g: $(DLLOBJECTSDEBUG)
+else
+$(TARGETDIR)/libmlw-g: $(DLLOBJECTSDEBUG) $(ARCHIVES)
+endif
 	@echo 'MAKE: $@'
 	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
 ifeq "$(NTTYPE)" "TRUE"
@@ -597,7 +700,7 @@ ifeq "$(NTTYPE)" "TRUE"
 	@bscmake /oruntime-g.bsc $(DLLOBJECTSSBR)
 else
 #see note in libmlw target
-	@$(LINK) $(DLLFLAGS) $(LINKFLAGS)libmlw-g.so $(DLLOBJECTSDEBUG) $(LIBRARIES) $(DLLLIBRARIES) $(LINKENDFLAGS)
+	@$(LINK) $(DLLFLAGS) $(LINKFLAGS)libmlw-g.so $(DLLOBJECTSDEBUG) $(ARCHIVES) $(LIBRARIES) $(DLLLIBRARIES) $(LINKENDFLAGS)
 	@mv libmlw-g.so $(TARGETDIR)
 endif
 
@@ -628,14 +731,14 @@ endif
 ifeq "$(NTTYPE)" "TRUE"
 $(TARGETDIR)/old-main: $(OBJECTS) $(proj).rbj
 else
-$(TARGETDIR)/old-main: $(OBJECTS)
+$(TARGETDIR)/old-main: $(OBJECTS) $(ARCHIVES)
 endif
 	@echo 'MAKE: $@'
 	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
 ifeq "$(NTTYPE)" "TRUE"
 	@$(LINK) $(LINKFLAGS)$(TARGETDIR)/main $(OBJECTS) $(proj).rbj $(LIBRARIES) $(LINKENDFLAGS) -subsystem:console
 else
-	@$(LINK) $(LINKFLAGS)$(TARGETDIR)/main $(OBJECTS) $(LIBRARIES) $(LINKENDFLAGS)
+	@$(LINK) $(LINKFLAGS)$(TARGETDIR)/main $(OBJECTS) $(ARCHIVES) $(LIBRARIES) $(LINKENDFLAGS)
 	@$(STRIP) $(TARGETDIR)/main
 endif
 
@@ -648,10 +751,10 @@ endif
 
 ifeq "$(NTTYPE)" "TRUE"
 else
-$(TARGETDIR)/main-static: $(OBJECTSSTATIC)
+$(TARGETDIR)/main-static: $(OBJECTSSTATIC) $(ARCHIVES)
 	@echo 'MAKE: $@'
 	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
-	@$(LINK) -Xlinker -Bstatic $(LINKFLAGS)$@ $(OBJECTSSTATIC) $(LIBRARIESSTATIC) $(LINKENDFLAGS)
+	@$(LINK) -Xlinker -Bstatic $(LINKFLAGS)$@ $(OBJECTSSTATIC) $(ARCHIVES) $(LIBRARIESSTATIC) $(LINKENDFLAGS)
 	@$(STRIP) $@
 endif
 
@@ -675,7 +778,7 @@ endif
 ifeq "$(NTTYPE)" "TRUE"
 $(TARGETDIR)/old-main-g: $(OBJECTSDEBUG) $(proj).rbj
 else
-$(TARGETDIR)/old-main-g: $(OBJECTSDEBUG)
+$(TARGETDIR)/old-main-g: $(OBJECTSDEBUG) $(ARCHIVES)
 endif
 	@echo 'MAKE: $@'
 	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
@@ -684,7 +787,7 @@ ifeq "$(NTTYPE)" "TRUE"
 	@cp runtime-g.exe $(TARGETDIR)/main-g.exe
 	@bscmake /oruntime-g.bsc $(OBJECTSSBR) main.sbr
 else
-	@$(LINK) $(LINKFLAGSDEBUG)$(TARGETDIR)/main-g $(OBJECTSDEBUG) $(LIBRARIES) $(LINKENDFLAGSDEBUG)
+	@$(LINK) $(LINKFLAGSDEBUG)$(TARGETDIR)/main-g $(OBJECTSDEBUG) $(ARCHIVES) $(LIBRARIES) $(LINKENDFLAGSDEBUG)
 endif
 
 
@@ -698,17 +801,27 @@ $(TARGETDIR)/main-windows-g: $(TARGETDIR)/libmlw-g $(RTSOBJECTSDEBUG) $(proj).rb
 	@bscmake /oruntime-g.bsc $(OBJECTSSBR) main_stub.sbr
 endif
 
-$(TARGETDIR)/test_fixup-g: $(TESTFIXOBJECTS)
+$(TARGETDIR)/test_fixup-g: $(TESTFIXOBJECTS) $(ARCHIVES)
 	@echo 'MAKE: $@'
 	@$(MKDIR) $(TARGETDIR) $(MKDIREND)
-	@$(LINK) $(LINKFLAGSDEBUG) $@ $(TESTFIXOBJECTS) $(LIBRARIES) $(LINKENDFLAGSDEBUG)
+	@$(LINK) $(LINKFLAGSDEBUG) $@ $(TESTFIXOBJECTS) $(ARCHIVES) $(LIBRARIES) $(LINKENDFLAGSDEBUG)
  
+ifeq "$(NTTYPE)" "TRUE"
+else
+$(ARCHIVES): force
+	@unset MAKEFLAGS && cd license/liclient && ./do-make
+	@unset MAKEFLAGS && cd license/licshar && ./do-make
+endif
+
 # === PSUEDO TARGETS ===
 
 clean: force
+	@cd sha && $(MAKE) -f Makefile OS=$(OS) clean
 ifeq "$(NTTYPE)" "TRUE"
-	$(RM) -f $(OBJECTDIR)/* $(TARGETDIR)/* $(RUNTIMES:%=%.exe) runtime.rbj libmlw.dll libmlw-g.dll
+	$(RM) -f $(OBJECTDIR)/* $(TARGETDIR)/* $(RUNTIMES:%=%.exe) runtime.rbj libmlw.dll libmlw-g.dll validate_license.dll
 else
+	@unset MAKEFLAGS && cd license/liclient && ./do-make clean
+	@unset MAKEFLAGS && cd license/licshar && ./do-make clean
 	$(RM) -f $(OBJECTDIR)/* core $(TARGETDIR)/* $(RUNTIMES)
 endif
 
@@ -797,6 +910,15 @@ runtime-windows-g: force $(TARGETDIR)/main-windows-g
 	cp $(TARGETDIR)/libmlw-g.dll .
 endif
 
+
+mklic:	force $(TARGETDIR)/mlw_mklic
+ifeq "$(NTTYPE)" "TRUE"
+	@rm -f $@.exe
+	cp $(TARGETDIR)/mlw_mklic.exe $@.exe
+else
+	@$(RM) $@
+	$(LN) -s $(TARGETDIR)/mlw_mklic $@
+endif
 
 test_fixup-g: $(TARGETDIR)/test_fixup-g
 	@$(RM) $@

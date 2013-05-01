@@ -1,40 +1,12 @@
 /*  ==== OPERATING SYSTEM INTERFACE ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1994 Harlequin Ltd
  *
  *  Revision Log
  *  ------------
  *  $Log: os.c,v $
- *  Revision 1.13  1998/09/17 14:24:16  jont
- *  [Bug #30108]
- *  Move dummy definitions os asm_trampoline from unix.c into os.c
- *
- * Revision 1.12  1997/03/24  15:03:36  nickb
- * Make malloc() and realloc() edge cases match the OS libraries.
+ *  Revision 1.12  1997/03/24 15:03:36  nickb
+ *  Make malloc() and realloc() edge cases match the OS libraries.
  *
  * Revision 1.11  1997/03/19  16:56:26  daveb
  * [Bug #1941]
@@ -193,9 +165,3 @@ extern void *os_allocator(int code, void *arg)
   return NULL;
 }
 
-extern mlval asm_trampoline(mlval x);
-
-extern mlval asm_trampoline(mlval x)
-{
-  error("Unix version of asm_trampoline not yet implemented and shouldn't be called");
-}

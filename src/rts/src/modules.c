@@ -1,30 +1,6 @@
 /*  ==== GLOBAL MODULE TABLE ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harlequin Ltd.
  *
  *  Implementation
  *  --------------
@@ -33,14 +9,10 @@
  *  Revision Log
  *  ------------
  *  $Log: modules.c,v $
- *  Revision 1.5  1998/08/21 16:34:08  jont
- *  [Bug #30108]
- *  Implement DLL based ML code
- *
- * Revision 1.4  1998/02/23  18:24:07  jont
- * [Bug #70018]
- * Modify declare_root to accept a second parameter
- * indicating whether the root is live for image save
+ *  Revision 1.4  1998/02/23 18:24:07  jont
+ *  [Bug #70018]
+ *  Modify declare_root to accept a second parameter
+ *  indicating whether the root is live for image save
  *
  * Revision 1.3  1996/02/14  15:06:11  jont
  * Changing ERROR to MLERROR
@@ -107,7 +79,6 @@
 #include "values.h"
 #include "allocator.h"
 #include "gc.h"
-#include "pervasives.h"
 
 mlval mt_empty(void)
 {
@@ -131,7 +102,7 @@ mlval mt_add(mlval table, mlval name, mlval structure, mlval time)
   retract_root(&name);
   retract_root(&structure);
   retract_root(&time);
-  new_table = mlw_cons(triple, table);
+  new_table = cons(triple, table);
 
   return(new_table);
 }
@@ -234,11 +205,4 @@ mlval mt_lookup_time(mlval table, mlval name, mlval parent)
   } while (index != 0);
 
   return(MLERROR);
-}
-
-extern void mt_update(mlval structure, mlval name, mlval time)
-{
-  mlval temp = mt_add(DEREF(modules), name, structure, time);
-  /* Do NOT inline this */
-  MLUPDATE(modules, 0, temp);
 }

@@ -1,30 +1,6 @@
 /*  ==== ARENA MANAGEMENT ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1996 Harlequin Ltd
  *
  *  Implementation
  *  --------------
@@ -36,13 +12,9 @@
  *  Revision Log
  *  ------------
  *  $Log: arena.c,v $
- *  Revision 1.15  1998/08/21 14:27:06  jont
- *  [Bug #20134]
- *  Implement system_validate_address
- *
- * Revision 1.14  1998/07/15  13:28:29  jont
- * [Bug #20124]
- * Add implementation of system_valid_address
+ *  Revision 1.14  1998/07/15 13:28:29  jont
+ *  [Bug #20124]
+ *  Add implementation of system_valid_address
  *
  * Revision 1.13  1998/05/22  10:34:07  jont
  * [Bug #70035]
@@ -141,10 +113,6 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/signal.h>
-#include <sys/fault.h>
-#include <sys/syscall.h>
-#include <sys/procfs.h>
 
 /* type and extent tables */
 
@@ -421,21 +389,6 @@ static void release_arena_space(int space)
   SPACE_MAP(space)    = NULL;
 }
 
-#ifdef DEBUG
-void test_validate_address(void)
-{
-  unsigned int i = 0;
-  do {
-    if (system_validate_address((void *)i)) {
-      printf("Address 0x%x ok\n", i);
-    } else {
-      printf("Address 0x%x bad\n", i);
-    }
-    i += page_size;
-  } while (i != 0);
-}
-#endif
-
 void arena_init(void)
 {
   int first_block_space = 0, i;
@@ -637,52 +590,5 @@ void block_free(byte *block, size_t size)
 
 int system_validate_address(void *addr)
 {
-#if 0
-  /* This is the implementation as it would be if the Irix designers weren't
-   * so stupid as to disallow the relevant ioctls except to su programs.
-   * Still irix will be dead within a year or so when SGI stop making MIPS
-   * after which it will all be somewhat academic.
-   */
-  int page_mask = -1 ^ (page_size-1);
-  caddr_t start_addr = (caddr_t)(((int)addr) & page_mask);
-  int pid = getpid();
-  char buffer[256];
-  int fildes;
-  int j;
-  int mappings;
-  prmap_t *maps;
-  sprintf(buffer, "/proc/pinfo/%05d", pid);
-  printf("Opening '%s'\n", buffer);
-  fildes = open(buffer, O_RDONLY);
-  if (fildes == -1) {
-    error("system_validate_address fails with errno %d(%s) to open '%s'\n", errno, strerror(errno), buffer);
-  }
-  if (ioctl(fildes, PIOCNMAP, &mappings) == -1) {
-    error("ioctl PIOCNMAP fails with errno %d(%s)\n", errno, strerror(errno));
-  }
-  maps = malloc((mappings+1) * sizeof(prmap_t));
-  if (maps == NULL) {
-    error("system_validate_address: malloc has returned NULL on request for 0x%x bytes\n",
-	  (mappings+1) * sizeof(prmap_t));
-  }
-  if (ioctl(fildes, PIOCMAP, maps) == -1) {
-    error("ioctl PIOCMAP fails with errno %d(%s)\n", errno, strerror(errno));
-  }
-  if (ioctl(fildes, PIOCNMAP, &mappings) == -1) {
-    error("ioctl PIOCNMAP fails with errno %d(%s)\n", errno, strerror(errno));
-  }
-  /* This allows for the fact that the malloc might cause an extra SPACE to be created */
-  close(fildes);
-  for(j=0; j<mappings; j++) {
-    if (maps[j].pr_vaddr <= start_addr && start_addr < maps[j].pr_vaddr + maps[j].pr_size) {
-      long flags = maps[j].pr_mflags;
-      free(maps);
-      return (flags & MA_READ) ? 1 : 0;
-    }
-  }
-  free(maps);
-  return 0;
-#else
-  return 1; /* Best we can do given the stupid OS design */
-#endif
+  return 1; /* Dummy until we find a real implementation */
 }

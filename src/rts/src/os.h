@@ -1,30 +1,6 @@
 /*  ==== OPERATING SYSTEM INTERFACE ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1994 Harlequin Ltd
  *
  *  Description
  *  -----------
@@ -33,17 +9,9 @@
  *  Revision Log
  *  ------------
  *  $Log: os.h,v $
- *  Revision 1.9  1998/09/16 15:05:52  jont
- *  [Bug #70174]
- *  Modify type of parse_command_line to fix compiler warnings
- *
- * Revision 1.8  1998/09/16  10:46:36  jont
- * [Bug #30108]
- * System specific stuff for command lines
- *
- * Revision 1.7  1998/08/17  11:29:16  jont
- * [Bug #70153]
- * Add system_validate_ml_address
+ *  Revision 1.7  1998/08/17 11:29:16  jont
+ *  [Bug #70153]
+ *  Add system_validate_ml_address
  *
  * Revision 1.6  1997/03/24  15:03:25  nickb
  * Make malloc() and realloc() edge cases match the OS libraries.
@@ -125,9 +93,5 @@ extern void *os_allocator(int code, void *arg);
 /* This is important for when code may live in shared objects */
 
 extern int system_validate_ml_address(void *addr);
-
-/* A function to get and parse the command line the command line */
-
-extern const char *const *parse_command_line(int *argc);
 
 #endif

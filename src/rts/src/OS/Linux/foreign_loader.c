@@ -1,30 +1,6 @@
 /*  ==== FOREIGN OBJECT LOADER ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1997 The Harlequin Group Ltd.  All rights reserved.
  *
  *  Implementation  (* Linux *)
  *  --------------
@@ -32,14 +8,10 @@
  *  Revision Log
  *  ------------
  *  $Log: foreign_loader.c,v $
- *  Revision 1.3  1998/09/30 11:53:11  jont
- *  [Bug #70108]
- *  Acquire libelf.h from the correct place, ie libelf/libelf.h
- *
- * Revision 1.2  1997/09/11  15:38:12  jkbrook
- * [Bug #30354]
- * Merge from MLWorks_10r3:
- * Port of old FI to Linux
+ *  Revision 1.2  1997/09/11 15:38:12  jkbrook
+ *  [Bug #30354]
+ *  Merge from MLWorks_10r3:
+ *  Port of old FI to Linux
  *
  * Revision 1.1.9.1.3.2  1997/09/11  15:38:12  jkbrook
  * [Bug #30262]
@@ -82,21 +54,45 @@
 #include "foreign_loader.h"
 
 #include <dlfcn.h>      /* Run-Time Dynamic Linking libraries */ 
-#include <libelf/libelf.h>     /* ELF libraries -- Linux            */
+#include <libelf.h>     /* ELF libraries -- Linux            */
 
 #include <fcntl.h>
 #include <unistd.h>
+
+#if 0
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#endif
+
+
+#if FAKE_RTS
+
+#include "fake_foreign_loader.h"
+#include "mylib.h"
+#include "fake_rts.h"
+
+#endif
+
 
 /* Macros */
 
 
 #define INDEXPTR(base,index,size)  ((unsigned long int)(base) + ((size)*(index)))
 
+#ifndef FAKE_RTS
+
 #define bit(a)                     (1u << (a))
 #define bitblk(hi,lo)              (bit(hi) | (bit(hi) - bit(lo)))
 #define appmask(x,m)               ((x) & (m))
 #define rshift(x,lo)               ((unsigned)(x) >> (lo))
 #define getbitblk(u,hi,lo)         (appmask(rshift((u),(lo)),bitblk(1+(hi) - (lo),0)))
+
+#endif
+
 
 /* Local Procedure/Function stub decls. */
 

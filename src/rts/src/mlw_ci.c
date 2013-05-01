@@ -1,28 +1,4 @@
-/* Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/* Copyright 1997 The Harlequin Group Limited.  All rights reserved.
  *
  * The C side of the C<->ML Interface.
  *
@@ -42,11 +18,7 @@
  * ------------
  *
  * $Log: mlw_ci.c,v $
- * Revision 1.3  1999/03/17 17:26:21  johnh
- * [Bug #190529]
- * Add support (expose declaring/retracting of gc roots) for stub generator.
- *
- * Revision 1.2  1997/07/01  14:13:39  stephenb
+ * Revision 1.2  1997/07/01 14:13:39  stephenb
  * [Bug #30029]
  * Renaming
  *
@@ -83,27 +55,6 @@ mlw_ci_export mlw_val mlw_ci_boxi_make(unsigned int i)
   return v;
 }
 
-/* 
-** Needed to be able to pass back several or more values to ML.
-*/
-mlw_ci_export mlw_val mlw_ci_tuple_make(int n)
-{
-  mlw_val v = allocate_record(n);
-  return v;
-}
-
-/* Used in conjunction with the above tuple making function to 
-** ensure gc safety when allocating multiple ML values.
-*/
-mlw_ci_export void declare_gc_root (mlw_val v)
-{
-  declare_root (&v, 0);
-}
-
-mlw_ci_export void retract_gc_root (mlw_val v)
-{
-  retract_root (&v);
-}
 
 
 

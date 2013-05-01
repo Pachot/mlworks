@@ -3,38 +3,10 @@
  * Functions for recognising and manipulating architecture-specific code
  * sequences.
  * 
- * Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (C) 1995 Harlequin Ltd.
  *
  * $Log: arch_code.c,v $
- * Revision 1.4  1998/08/21 14:54:07  jont
- * [Bug #20133]
- * Stop modifying code vectors for space profiling
- *
- * Revision 1.3  1996/12/19  13:25:53  nickb
+ * Revision 1.3  1996/12/19 13:25:53  nickb
  * Add instruction cache flushing.
  *
  * Revision 1.2  1995/12/13  11:36:51  nickb
@@ -207,9 +179,6 @@ extern int arch_space_unprofile_code(mlval codepointer)
     
 extern int arch_space_profile_code(mlval codepointer)
 {
-#ifdef SPACE_PROFILE_OVERFLOW
-  return 0;
-#else
   word *first_instruction, *last_instruction;
   int changes;
   first_and_last_instructions(&first_instruction, &last_instruction,
@@ -217,5 +186,5 @@ extern int arch_space_profile_code(mlval codepointer)
   changes = add_space_profiling(first_instruction, last_instruction);
   /* would flush icache here if that was meaningful on x86 */
   return changes;
-#endif  
+  
 }

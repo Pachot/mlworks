@@ -1,41 +1,13 @@
 /*  ==== PROFILER ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harlequin Ltd.
  *
  *  Revision Log
  *  ------------
  *  $Log: profiler.c,v $
- *  Revision 1.30  1998/08/21 16:35:00  jont
- *  [Bug #20133]
- *  Modify space profiling to set up GC_HEAP_LIMIT
- *
- * Revision 1.29  1998/04/27  15:49:02  jont
- * [Bug #70032]
- * gen->values now measured in bytes
+ *  Revision 1.29  1998/04/27 15:49:02  jont
+ *  [Bug #70032]
+ *  gen->values now measured in bytes
  *
  * Revision 1.28  1998/04/23  14:12:56  jont
  * [Bug #70034]
@@ -274,7 +246,6 @@
 #include "environment.h"
 #include "arch_code.h"
 #include "time_date.h"
-#include "state.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -1191,7 +1162,7 @@ static mlval time_profile_item_callers(struct time_profile_callers *callers)
       if (callers->callers[i].code) {
 	mlval temp = time_profile_item_caller(&(callers->callers[i]));
 	 /* Do NOT inline this */
-	caller_list = mlw_cons(temp, caller_list);
+	caller_list = cons(temp, caller_list);
       }
     callers = callers->next;
   }
@@ -1363,7 +1334,7 @@ static void time_profile_resume(void)
 static unsigned int space_profile_codes;
 static size_t space_profile_data_size;
 static unsigned int space_profile_colls;
-int space_profile_active;
+static int space_profile_active;
 int space_profiling;
 
 /* Space profiling 
@@ -2116,7 +2087,7 @@ static mydecl void transform_creation_space_profile_closures(void)
       if (MLVALISPTR(closure)) {
 	mlval code = get_code_vector_from_closure(closure);
 	struct profile *profile = (struct profile *) CCODEPROFILE(code);
-	*start = (profile == NULL) ? (word)NULL : (word)profile->space;
+	*start = (word)profile->space;
       }
       start += 2;
     }
@@ -2198,10 +2169,8 @@ static mydecl void space_profile_code(struct profile *profile)
 {
   if (profile->manner & PROFILE_SPACE) {
     profile->space = construct_space_profile(profile->manner);
-    /*
     if (space_profile_active)
       arch_space_profile_code(profile->code);
-      */
     space_profile_codes ++;
   }
 }
@@ -2466,7 +2435,7 @@ datatype large_size =
 
 static mydecl mlval space_profile_item_large(struct large *l)
 {
-  mlval result = mlw_cons(MLINT(l->low), MLINT(l->high));
+  mlval result = cons(MLINT(l->low), MLINT(l->high));
   return result;
 }
 
@@ -2542,14 +2511,14 @@ space_profile_item_breakdown(unsigned int flags,
 	  (index == -1 ? 
 	   space_profile_item_breakdown_other(breakdown) :
 	   space_profile_item_object_count(&breakdown->obj[index]));
-	count = mlw_cons(MLINT(j),count);
-	this = mlw_cons(count,this);
+	count = cons(MLINT(j),count);
+	this = cons(count,this);
 	f -= i;
       }
       i = i << 1;
       j++;
     }
-    this = mlw_cons(this, space_profile_item_breakdown(flags, breakdown->next));
+    this = cons(this, space_profile_item_breakdown(flags, breakdown->next));
     retract_root(&this);
     return this;
   } else
@@ -2570,7 +2539,7 @@ space_profile_item_copies(struct space_profile_copies *copies)
       if (!large_zero_p(copies->copied[i])) {
 	mlval temp = space_profile_item_large(&copies->copied[i]);
 	/* Do NOT inline this */
-	SPACE_ROOT2 = mlw_cons(temp, SPACE_ROOT2);
+	SPACE_ROOT2 = cons(temp, SPACE_ROOT2);
       }
       i--;
     }
@@ -2610,7 +2579,7 @@ static mlval space_profile_item(struct space_profile *prof)
   } else {
     /* not space-profiling this item; return the null record */
     if (space_profile_null_item == MLUNIT) {
-      SPACE_ROOT1 = mlw_cons(MLINT(-1),MLINT(0));
+      SPACE_ROOT1 = cons(MLINT(-1),MLINT(0));
       space_profile_null_item = allocate_record(4);
       FIELD(space_profile_null_item,0) = SPACE_ROOT1;
       FIELD(space_profile_null_item,1) = MLNIL;
@@ -2680,21 +2649,6 @@ static mydecl void space_profile_start (void)
 static mydecl void space_profile_on(void)
 {
   struct space_profile_area *creation_area;
-#ifdef SPACE_PROFILE_OVERFLOW
-  space_profiling = 1;
-  if (profile_manners & PROFILE_SPACE) {
-    creation_area = get_space_profile_area(creation, creation->end - creation->start);
-    CURRENT_THREAD->ml_state.space_profile = creation_area->base;
-    space_profile_total = construct_space_profile(profile_manners);
-    space_profile_active = 1;
-    space_profile_colls = 0;
-    space_profile_null_item = MLUNIT;
-  declare_root(&space_profile_null_item, 0);
-  } else {
-    space_profile_active = 0;
-    space_profile_total = NULL;
-  }
-#else
   struct profile_table *list;
 
   creation_area = get_space_profile_area(creation, creation->end - creation->start);
@@ -2708,22 +2662,14 @@ static mydecl void space_profile_on(void)
   space_profiling = 1;
   space_profile_active = 1;
   space_profile_colls = 0;
-
-#endif
   space_profile_null_item = MLUNIT;
   declare_root(&space_profile_null_item, 0);
+
   /* now modify the code for all items being space profiled. We didn't
    * do this already because there wasn't a space profile area for
    * such modified items to use, and they may be run to determine a
    * profile manner. See MLWorks bug 1808. */
 
-  /* This is not longer required */
-  /* Instead, we modify GC_HEAP_LIMIT so that allocation */
-  /* automatically enters the gc */
-#ifdef SPACE_PROFILE_OVERFLOW
-  if (profile_manners & PROFILE_SPACE)
-    GC_HEAP_LIMIT = GC_HEAP_START;
-#else
   list = profile_list;
   while(list != NULL) {
     unsigned int i;
@@ -2734,7 +2680,6 @@ static mydecl void space_profile_on(void)
     }
     list = list->next;
   }
-#endif
 }
 
 static mydecl void space_profile_off(void)
@@ -2757,7 +2702,6 @@ static mydecl void space_profile_resume (void)
 
 static mydecl void space_profile_end (void)
 {
-  GC_HEAP_LIMIT = GC_HEAP_REAL_LIMIT;
   space_profile_null_item = MLUNIT;
   retract_root(&space_profile_null_item);
   space_profile_total = NULL;
@@ -3300,7 +3244,7 @@ static mlval profile_result_functions(void) /* uses roots 1-4 */
 	FIELD(GEN_ROOT3,1) = CCODENAME(prof->code);
 	FIELD(GEN_ROOT3,2) = GEN_ROOT1;
 	FIELD(GEN_ROOT3,3) = GEN_ROOT2;
-	GEN_ROOT4 = mlw_cons(GEN_ROOT3,GEN_ROOT4);
+	GEN_ROOT4 = cons(GEN_ROOT3,GEN_ROOT4);
       }
     }
     list = list->next;
@@ -3531,7 +3475,7 @@ static mlval ml_profile(mlval argument)
   }
 
   retract_root (&profiled_function);
-  result = mlw_cons(result,profile);
+  result = cons(result,profile);
   retract_root(&result);
   retract_root(&profile);
   return(result);

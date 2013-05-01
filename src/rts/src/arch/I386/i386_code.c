@@ -1,30 +1,6 @@
 /* ==== I386 CODE MANIPULATION ====
  * 
- * Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (C) 1995 Harlequin Ltd.
  *
  * Description
  * -----------
@@ -43,15 +19,7 @@
  * Revision Log
  * ------------
  * $Log: i386_code.c,v $
- * Revision 1.11  1998/09/17 14:20:14  jont
- * [Bug #70143]
- * Fix compiler warnings in is_closure
- *
- * Revision 1.10  1998/08/17  16:48:07  jont
- * [Bug #70143]
- * Fix is_closure to understand about DLL based code and closures
- *
- * Revision 1.9  1998/07/15  10:07:22  jont
+ * Revision 1.9  1998/07/15 10:07:22  jont
  * [Bug #70073]
  * Remove support for unaligned esp during float sequences
  * as we've stoped the code generator making them
@@ -166,7 +134,7 @@ presented side by side.
 1.1. stack overflow test:
 	-				8d4c24xxlea	ecx, -framesize(esp)
 					8d8c24xxxxxxxx
-3b6664	cmp	esp,slimit(thread)	3b4e64	cmp	ecx, slimit(thread)
+3b6660	cmp	esp,slimit(thread)	3b4e60	cmp	ecx, slimit(thread)
 72xx	jcc	overflow		72xx	jcc	overflow
 0f82xxxxxxxx				0f82xxxxxxxx
 1.2. skip non-GC part of frame:
@@ -333,7 +301,6 @@ static uint32 instruction_type(uint8 **ipp, int32 *amount)
       return MAKE_INSTR(JMP_OR_RET,POSSIBLE_PROLOG);
     }
     break;
-  case 0x31:
   case 0x33:
     if (ip[1] == 0xc9) {      			/* xor ecx,ecx */
       *amount = 0;
@@ -342,7 +309,7 @@ static uint32 instruction_type(uint8 **ipp, int32 *amount)
     }
     break;
   case 0x3b:
-    if ((ip[2] == 0x60 || ip[2] == 0x64) &&
+    if (ip[2] == 0x60 &&
 	((ip[1] == 0x4e) || (ip[1] == 0x66))) { /*cmp ecx|esp,slimit(thread) */
       *amount = 0;
       *ipp = ip+3;
@@ -748,51 +715,34 @@ static uint32 compute_args_size(word ebp)
 
 /* This tells us whether a given ML value is a valid closure */
 
-static int is_closure(mlval clos, int diagnose)
+static int is_closure(mlval clos)
 {
-  /* first check that it is an ML pointer into a valid memory area */
+  /* first check that it is an ML pointer into a heap area */
   if (ISORDPTR(clos)) {
-    if (validate_ml_address((void *) clos)) {
+    int type = SPACE_TYPE(clos);
+    if (type != TYPE_RESERVED
+	&& type != TYPE_FREE) {
       /* next check that it indicates a record, or a shared closure */
       mlval header = GETHEADER(clos);
       if (header == 0 || SECONDARY(header) == RECORD) {
 	/* then check that the first field is a pointer */
 	mlval code = FIELD(clos,0);
-	if (PRIMARY(code) == POINTER && validate_ml_address((void *)code)) {
-	  /* Looks ok and is valid */
-	  /* If it's on the heap we must be more careful */
-	  /* it's possible at this point that we have a partially allocated
-	   * record, so this 'code' value could be completely bogus */
-	  int  type = SPACE_TYPE(code);
-	  if (type == TYPE_FREE) {
-	    /* On the heap but not in use */
-	    /* Shouldn't happen */
-	    if (diagnose)
-	      printf("is_closure fails because code 0x%x is in a free area\n", code);
-	    return 0;
-	  } else {
-	    /* Either not on the heap at all, assumed static */
-	    /* Or on the heap */
-	    /* Either way, ok, if it points to a code item */
-	    if (diagnose && (SECONDARY(GETHEADER(code)) != BACKPTR))
-	      printf("is_closure fails because code 0x%x has a bad BACKPTR\n", code);
-	    return (SECONDARY(GETHEADER(code)) == BACKPTR);
-	  } 
-	} else {
-	  if (diagnose)
-	    printf("is_closure fails because code 0x%x is bad\n", code);
+	if (PRIMARY(code) == POINTER) {
+	  if (code == stub_c || code == stub_asm)
+	    return 1;
+	  else {
+	    /* it's possible at this point that we have a partially allocated
+	     * record, so this 'code' value could be completely bogus */
+	    type = SPACE_TYPE(code);
+	    if (type != TYPE_RESERVED
+		&& type != TYPE_FREE
+		&& SECONDARY(GETHEADER(code)) == BACKPTR)
+	      /* lastly check that it points to a code item */
+	      return 1;
+	  }
 	}
-      } else {
-	if (diagnose)
-	  printf("is_closure fails because ebp does not have a valid header\n");
       }
-    } else {
-      if (diagnose)
-	printf("is_closure fails because ebp is not a valid address\n");
     }
-  } else {
-    if (diagnose)
-      printf("is_closure fails because ebp is not a pointer\n");
   }
   return 0;
 }
@@ -809,14 +759,11 @@ static word fixup_sp_prologue(word eip, word esp, word ebp, word edi, word ecx,
   message("enter fixup_sp_prologue with esp = 0x%x, eip = 0x%x, ecx = 0x%x" , esp, eip, ecx);
   2*/
   if (!in_ebp) {
-    if (sure) {
-      (void)is_closure(ebp, 1);
-      *(int *)0 = 0;
+    if (sure)
       error("profiler found prologue instruction outside ebp closure, sure was %d\nbyte sequence 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, ip = 0x%x, ebp[0] = 0x%x",
 	    sure, *(uint8 *)eip, ((uint8 *)eip)[1], ((uint8 *)eip)[2],
 	    ((uint8 *)eip)[3], ((uint8 *)eip)[4], ((uint8 *)eip)[5],
 	    ((uint8 *)eip)[6], ((uint8 *)eip)[7], eip, FIELD(ebp, 0));
-    }
     else {
       /*1
       message("exit fixup_sp_prologue unsure not in ebp");
@@ -882,8 +829,8 @@ static word fixup_sp_prologue(word eip, word esp, word ebp, word edi, word ecx,
 	2*/
       } else {
 	if (*psure)
-	  error("non-prologue instruction 0x%x 0x%x 0x%xfound before profile point"
-		" in a function prologue", *ip, ip[1], ip[2]);
+	  error("non-prologue instruction found before profile point"
+		" in a function prologue");
 	else {
 	  return 0;
 	}
@@ -1169,7 +1116,7 @@ static word fixup_sp_epilogue(word eip, word esp, word edi, word ebp, word ecx,
     } else if (INSTR(old_type) == JMP_OR_RET || INSTR(type) == JMP_OR_RET) {
       /* We have arrived close to a possible tail instruction */
       /* We check to see if we're going somewhere given by ebp */
-      if (is_closure(ebp, 0)) {
+      if (is_closure(ebp)) {
 	/* We may be in business. Amount remaining on stack = */
 	/* ARGS_SIZE(ebp) - amount pushed by new closure PROLOG*/
 	/* First check that where we're going is where ebp says */
@@ -1300,7 +1247,7 @@ extern word i386_fixup_sp(word esp, word eip, word edi, word ebp, word ecx)
     /*1
     message("enter i386_fixup_sp case 1");
     2*/
-    if (is_closure(ebp, 0) && pc_in_closure(eip,ebp)) {
+    if (is_closure(ebp) && pc_in_closure(eip,ebp)) {
       if (CCODELEAF(FIELD(ebp,0))) {
 	clos2 = ebp;
 	sp = esp+4+ARGS_SIZE(ebp);	/* +4 for the return address */
@@ -2074,7 +2021,6 @@ extern int read_instr (byte **pptr)
 	if (float_single_lookup_1[op-0xd8] & (1 << REG(modrm))) {
 	  message("Float op 0x%02x has reserved second byte 0x%02x",
 		  op,modrm);
-	  *(int *)0 = 0;
 	  return FAILURE;
 	}
 	type = MODRM;
@@ -2087,7 +2033,6 @@ extern int read_instr (byte **pptr)
 	if (reserved) {
 	  message("Float op 0x%02x has reserved second byte 0x%02x",
 		  op,modrm);
-	  *(int *)0 = 0;
 	  return FAILURE;
 	}
 	type = NONE;

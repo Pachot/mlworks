@@ -1,30 +1,6 @@
 /*  ==== THE IMPLICIT VECTOR ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1991 Harlequin Ltd
  *
  *  Description
  *  -----------
@@ -39,12 +15,8 @@
  *  Revision Log
  *  ------------
  *  $Log: implicit.h,v $
- *  Revision 1.9  1998/07/28 10:37:44  jont
- *  [Bug #20133]
- *  Add an extra gc_limit slot so we can modify the other one when space profiling
- *
- * Revision 1.8  1995/06/19  14:32:05  nickb
- * Add space profiling offsets.
+ *  Revision 1.8  1995/06/19 14:32:05  nickb
+ *  Add space profiling offsets.
  *
  * Revision 1.7  1995/06/02  15:24:15  jont
  * Add field for stack limit register (for Intel)
@@ -131,7 +103,6 @@ struct implicit_vector
   /* profile_alloc_leaf_3   */  word ml_profile_alloc_leaf_3;
   /* gc_base		    */  word gc_base;
   /* gc_limit		    */  word gc_limit;
-  /* real_gc_limit     	    */  word real_gc_limit;
   /* handler		    */  word handler;
   /* stack_limit	    */  word stack_limit;
   /* register_stack_limit   */  word register_stack_limit;

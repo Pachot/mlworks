@@ -1,30 +1,6 @@
 /*  ==== ARENA MANAGEMENT ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harlequin Ltd
  *
  *  Implementation
  *  --------------
@@ -36,13 +12,9 @@
  *  Based on SunOS version 1.9.
  *
  *  $Log: arena.c,v $
- *  Revision 1.14  1998/08/04 16:22:51  jont
- *  [Bug #20134]
- *  Implement system_validate_address properly
- *
- * Revision 1.13  1998/07/15  13:45:52  jont
- * [Bug #20124]
- * Add implementation of system_valid_address
+ *  Revision 1.13  1998/07/15 13:45:52  jont
+ *  [Bug #20124]
+ *  Add implementation of system_valid_address
  *
  * Revision 1.12  1998/05/20  16:42:48  jont
  * [Bug #70030]
@@ -104,10 +76,6 @@
 #include <sys/types.h>
 
 #include <limits.h>
-#include <sys/signal.h>
-#include <sys/fault.h>
-#include <sys/syscall.h>
-#include <sys/procfs.h>
 
 /* type and extent tables */
 
@@ -339,9 +307,15 @@ static int reserve_arena_space(caddr_t *base)
       }
     }
   }
+  /*
+  printf("arena_init reserved 0x%x bytes at 0x%x\n", SPACE_SIZE, *base);
+  */
   space_type[space]   = TYPE_FREE;
   space_extent[space] = 0;
   SPACE_MAP(space) = NULL;
+  /*
+  printf("reserve_arena_space at 0x%x\n", (unsigned)*base);
+  */
   return 0;
 }
 
@@ -367,21 +341,6 @@ static void release_arena_space(int space)
   space_extent[space] = (size_t)-1;
   SPACE_MAP(space)    = NULL;
 }
-
-#ifdef DEBUG
-void test_validate_address(void)
-{
-  unsigned int i = 0;
-  do {
-    if (system_validate_address((void *)i)) {
-      printf("Address 0x%x ok\n", i);
-    } else {
-      printf("Address 0x%x bad\n", i);
-    }
-    i += page_size;
-  } while (i != 0);
-}
-#endif
 
 void arena_init(void)
 {
@@ -421,6 +380,9 @@ void arena_init(void)
 	error_without_alloc("Arena initializing unable to reserve memory\n");
       }
       space = SPACE(((word)base) + (SPACE_SIZE) -1);
+      /*
+      printf("arena_init reserved 0x%x bytes at 0x%x\n", SPACE_SIZE, base);
+      */
       if (first_block_space == 0) {
 	/* Allocate first block space to what we've just got */
 	int i;
@@ -458,6 +420,9 @@ void arena_init(void)
 void space_free(byte *space)
 {
   int space_no = SPACE(space);
+  /*
+  printf("space_free: at 0x%x\n", (unsigned)space);
+  */
   unmap(space, space_extent[space_no]);
   release_arena_space(space_no);
 }
@@ -481,6 +446,9 @@ byte *space_alloc(byte type, size_t extent)
 {
   unsigned int i;
 
+  /*
+  printf("space_alloc: 0x%x\n", extent);
+  */
   if (extent > SPACE_SIZE) {
     error("Allocating too large a space");
   }
@@ -586,42 +554,6 @@ void block_free(byte *block, size_t size)
 
 int system_validate_address(void *addr)
 {
-  unsigned long page_mask = -1 ^ (page_size-1);
-  caddr_t start_addr = (caddr_t)(((unsigned long)addr) & page_mask);
-  int pid = getpid();
-  char buffer[256];
-  int fildes;
-  int j;
-  int mappings;
-  prmap_t *maps;
-  sprintf(buffer, "/proc/%05d", pid);
-  fildes = open(buffer, O_RDONLY);
-  if (fildes == -1) {
-    error("system_validate_address fails with errno %d to open '%s'\n", errno, buffer);
-  }
-  if (ioctl(fildes, PIOCNMAP, &mappings) == -1) {
-    error("ioctl PIOCNMAP fails with errno %d\n", errno);
-  }
-  maps = malloc((mappings+1) * sizeof(prmap_t));
-  if (maps == NULL) {
-    error("system_validate_address: malloc has returned NULL on request for 0x%x bytes\n",
-	  (mappings+1) * sizeof(prmap_t));
-  }
-  if (ioctl(fildes, PIOCMAP, maps) == -1) {
-    error("ioctl PIOCMAP fails with errno %d\n", errno);
-  }
-  if (ioctl(fildes, PIOCNMAP, &mappings) == -1) {
-    error("ioctl PIOCNMAP fails with errno %d\n", errno);
-  }
-  /* This allows for the fact that the malloc might cause an extra SPACE to be created */
-  close(fildes);
-  for(j=0; j<mappings; j++) {
-    if (maps[j].pr_vaddr <= start_addr && start_addr < maps[j].pr_vaddr + maps[j].pr_size) {
-      long flags = maps[j].pr_mflags;
-      free(maps);
-      return (flags & MA_READ) ? 1 : 0;
-    }
-  }
-  free(maps);
-  return 0;
+  return 1; /* Dummy until we find a real implementation */
+  /* madvise may do the trick here */
 }

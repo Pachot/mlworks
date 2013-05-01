@@ -2,38 +2,10 @@
  *
  * A program to generate automatically the values contained in asm_offsets.h
  *
- * Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (C) 1995 Harlequin Ltd.
  *
  * $Log: make_asm_offsets.c,v $
- * Revision 1.5  1998/06/11 11:36:41  jont
- * [Bug #30108]
- * Implement DLL based ML code
- *
- * Revision 1.4  1995/11/13  13:47:15  nickb
+ * Revision 1.4  1995/11/13 13:47:15  nickb
  * Add native thread fields.
  *
  * Revision 1.3  1995/09/06  13:09:20  nickb
@@ -51,7 +23,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "threads.h"
-#include "values.h"
 
 #include "make_asm_offsets_common.c"
 
@@ -77,8 +48,6 @@ int main(int argc, char*argv[])
     output_thread("c_eip", thread_offsetof(c_state.eip));
     output_thread("ml_profile", thread_offsetof(ml_state.space_profile));
     output_common();
-    output("STUB_ANCILL_","0",CCODE_MAKE_ANCILL(0,0,0,CCODE_NO_INTERCEPT,0,0));
-    output("STUB_ANCILL_","1",CCODE_MAKE_ANCILL(0,0,0,CCODE_NO_INTERCEPT,0,1));
   }
   return 0;
 }

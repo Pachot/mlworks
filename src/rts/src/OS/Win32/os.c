@@ -1,44 +1,12 @@
 /*  ==== OPERATING SYSTEM INTERFACE ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1994 Harlequin Ltd
  *
  *  Revision Log
  *  ------------
  *  $Log: os.c,v $
- *  Revision 1.12  1998/09/16 15:16:05  jont
- *  [Bug #70174]
- *  Modify type of parse_command_line to fix compiler warnings
- *
- * Revision 1.11  1998/09/16  10:53:27  jont
- * [Bug #30108]
- * System specific stuff for command lines
- *
- * Revision 1.10  1997/03/25  12:41:37  nickb
- * Fix compilation problem.
+ *  Revision 1.10  1997/03/25 12:41:37  nickb
+ *  Fix compilation problem.
  *
  * Revision 1.9  1997/03/24  15:03:30  nickb
  * Make malloc() and realloc() edge cases match the OS libraries.
@@ -102,7 +70,6 @@
 #include <assert.h>		/* assert */
 #include <float.h>		/* _controlfp */
 #include <stdlib.h>		/* atexit */
-#include <windows.h>
 
 #include "utils.h"
 #include "diagnostic.h"
@@ -234,128 +201,3 @@ extern void *os_allocator(int code, void *arg)
   return NULL;
 }
 
-/*
- * Parses a command line into its constituent command name and arguments
- * according to the rules given in Microsoft's Visual C++ C reference
- * in the section "Parsing C Command-Line Arguments".  Basically, the
- * rules are simple except for the treatment of the escape character (\\)
- * which is also the pathname delimiter character.
- * Copied from dylan version.
- */
-
-static int is_whitespace(char ch)
-{
-  return (ch == ' ' || ch == '\t' || ch == '\n');
-}
-
-static int skip_whitespace(int start, int end, char *args)
-{
-  char ch = args[start];
-  while (start < end && is_whitespace(args[start])) {
-    start++;
-  }
-  return start;
-}
-
-static int add_escapes(char *arg, int escapes, int res_ptr)
-{
-  while (escapes-- > 0) {
-    arg[res_ptr++] = '\\';
-  }
-  return res_ptr;
-}
-
-static int next_token(int start, int end, char *args, char **arg)
-{
-  int res_ptr = 0;
-  int ptr = skip_whitespace(start, end, args);
-  *arg = malloc(end + 1 - ptr); /* Maximum it can be */
-  if (arg == NULL) {
-    error_without_alloc("Cannot allocate process argument array\n");
-  }
-  if (ptr < end) {
-    int escaped = 0;
-    int quoted = 0;
-    while (ptr < end) {
-      char ch = args[ptr++];
-      if (escaped) {
-	if (ch == '\\') {
-	  escaped ++;
-	} else {
-	  if (ch == '"') {
-	    if (escaped % 2 == 0) {
-	      res_ptr = add_escapes(*arg, escaped / 2, res_ptr);
-	      ptr--; /* reread the " */
-	    } else {
-	      res_ptr = add_escapes(*arg, (escaped - 1) / 2, res_ptr);
-	      (*arg)[res_ptr++] = ch;
-	    }
-	  } else {
-	    res_ptr = add_escapes(*arg, escaped, res_ptr);
-	    (*arg)[res_ptr++] = ch;
-	  }
-	  escaped = 0;
-	}
-      } else {
-	if (is_whitespace(ch) && !quoted) {
-	  break;
-	}
-	switch (ch) {
-	case '\\':
-	  escaped = 1; /* Don't add this escape until later */
-	  break;
-	case '"':
-	  quoted = !quoted;
-	default:
-	  (*arg)[res_ptr++] = ch; /* All other characters added at read time */
-	  break;
-	}
-      }
-    }
-  } else {
-    return -1;
-  }
-  (*arg)[res_ptr] = '\0'; /* Terminate the arg */
-  return ptr;
-}
-
-static char **parse(int *argc, char *args)
-{
-  int start = 0;
-  int end = strlen(args);
-  int tokens = 0;
-  char **argv = malloc(end+1);
-  if (argv == NULL) {
-    error_without_alloc("Cannot allocate process argument array\n");
-  }
-  while (start < end) {
-    char *arg;
-    start = next_token(start, end, args, &arg);
-    if (start >= 0) {
-      argv[tokens++] = arg; /* Pointer to current token */
-    } else {
-      break;
-    }
-  }
-  *argc = tokens;
-  return argv;
-}
-
-extern const char *const *parse_command_line(int *argc)
-{
-  LPTSTR command_line = GetCommandLine();
-  return parse(argc, command_line);
-}
-
-BOOL WINAPI DllMain(HANDLE hModule, DWORD fdwreason, LPVOID reserved)
-{
-  switch (fdwreason) {
-  case DLL_PROCESS_ATTACH:
-  case DLL_THREAD_ATTACH:
-  case DLL_THREAD_DETACH:
-  case DLL_PROCESS_DETACH:
-  default:;
-    /* No action */
-  }
-  return 1;
-}

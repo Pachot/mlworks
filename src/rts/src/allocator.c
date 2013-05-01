@@ -1,30 +1,6 @@
 /*  ==== ML VALUE HEAP ALLOCATION ====
  *
- *  Copyright 2013 Ravenbrook Limited <http://www.ravenbrook.com/>.
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- *  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
- *  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *  Copyright (C) 1992 Harlequin Ltd.
  *
  *  Implementation
  *  --------------
@@ -36,13 +12,9 @@
  *  Revision Log
  *  ------------
  *  $Log: allocator.c,v $
- *  Revision 1.16  1998/07/29 13:12:02  jont
- *  [Bug #20133]
- *  Modify to use GC_HEAP_REAL_LIMIT
- *
- * Revision 1.15  1998/04/23  13:23:43  jont
- * [Bug #70034]
- * Rationalising names in mem.h
+ *  Revision 1.15  1998/04/23 13:23:43  jont
+ *  [Bug #70034]
+ *  Rationalising names in mem.h
  *
  * Revision 1.14  1997/10/21  12:42:51  daveb
  * [Bug #30259]
@@ -186,7 +158,7 @@ do { 						\
 						\
   p = GC_HEAP_START;				\
   GC_HEAP_START += w;				\
-  if(GC_HEAP_START >= GC_HEAP_REAL_LIMIT)		\
+  if(GC_HEAP_START >= GC_HEAP_LIMIT)		\
   {						\
     gc(w * sizeof(mlval), MLUNIT);		\
     p = GC_RETURN;				\
@@ -484,7 +456,7 @@ mlval ml_string (const char *cstring)
 
 size_t allocate_multiple(size_t size, size_t number, mlval **start)
 {
-  signed long available = (GC_HEAP_REAL_LIMIT - GC_HEAP_START)/size;
+  signed long available = (GC_HEAP_LIMIT - GC_HEAP_START)/size;
 
   assert(available >= 0);
 
