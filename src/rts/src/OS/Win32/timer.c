@@ -51,6 +51,8 @@
 #include "native_threads.h"
 #include "event.h"
 
+#include <assert.h>
+
 #include <windows.h>
 #include <mmsystem.h>
 
@@ -153,6 +155,9 @@ BOOL control_key_handler(DWORD ctrl_type)
   case CTRL_SHUTDOWN_EVENT:
     return FALSE;
   }
+
+  assert(0);
+  return FALSE;
 }
 
 extern int win32_set_ctrl_c_handler(void)
